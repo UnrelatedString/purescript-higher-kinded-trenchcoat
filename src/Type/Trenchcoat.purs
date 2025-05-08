@@ -14,6 +14,7 @@ import Data.Const (Const(..))
 import Data.Newtype (un)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
+import Data.String.CodeUnits (toCharArray, fromCharArray)
 import Type.Prelude (class TypeEquals)
 
 -- okay so I just now realized it'll probably take some like super wacky
@@ -39,6 +40,9 @@ import Type.Prelude (class TypeEquals)
 -- ........
 -- yeah good thing I started small jgf;aojg ;erg ;
 -- and what even other classes are there to support? Bifunctor?? maybe
+-- but anyways I'm starting to think it might have to like nest the structure so
+-- undisguise doesn't have to magically know every way it has to compose multiple
+-- like layers of metadata or whatever...?
 
 data Trenchcoat :: Type -> Type -> Type -> Type
 data Trenchcoat f a b = Trenchcoat f (a -> b)
@@ -69,7 +73,15 @@ undercover g = undisguise <<< g <<< disguise
 instance PseudoFunctor String CodePoint where
   pseudoMap f = fromCodePointArray <<< map f <<< toCodePointArray
 
+instance PseudoFunctor String Char where
+  pseudoMap f = fromCharArray <<< map f <<< toCharArray
+
 -- | this is kinda stupid because it's literally less flexible than
 -- | the normal Data.Set.map but at least it's not as pointless as the String one
+
+-- Also for when this is more flexible note that composing
+-- undercover maps will not always be consistent with a single
+-- composed undercover map if the type in between has a weird Eq instance
+-- that doesn't obey the non-existent law `a == a = f a == f a`
 instance Ord a => PseudoFunctor (Set.Set a) a where
   pseudoMap = Set.map
