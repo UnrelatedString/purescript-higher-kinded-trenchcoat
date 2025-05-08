@@ -6,6 +6,9 @@
         "core": {
           "dependencies": [
             {
+              "foldable-traversable": ">=6.0.0 <7.0.0"
+            },
+            {
               "ordered-collections": ">=3.2.0 <4.0.0"
             },
             {
