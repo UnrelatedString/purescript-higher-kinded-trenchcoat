@@ -82,6 +82,7 @@ instance PseudoFunctor String Char where
 -- Also for when this is more flexible note that composing
 -- undercover maps will not always be consistent with a single
 -- composed undercover map if the type in between has a weird Eq instance
--- that doesn't obey the non-existent law `a == a = f a == f a`
+-- that doesn't obey the non-existent law `a == a` implies `f a == f a`.
+-- The Trenchcoat itself still obeys the Functor laws by definition.
 instance Ord a => PseudoFunctor (Set.Set a) a where
   pseudoMap = Set.map
