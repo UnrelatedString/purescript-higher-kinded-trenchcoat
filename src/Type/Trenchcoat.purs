@@ -1,7 +1,7 @@
 module Type.Trenchcoat
   ( Trenchcoat
   , class PseudoFunctor
-  , class PartialFunctor
+  --, class PartialFunctor
   , pseudoMap
   , disguise
   , undisguise
@@ -43,10 +43,12 @@ import Type.Prelude (class TypeEquals)
 data Trenchcoat :: Type -> Type -> Type -> Type
 data Trenchcoat f a b = Trenchcoat f (a -> b)
 
-type PseudoFunctor :: Type -> Type -> Constraint
-type PseudoFunctor f a = PartialFunctor f (TypeEquals a)
+class PseudoFunctor :: Type -> Type -> Constraint
+class PseudoFunctor f a where
+  pseudoMap :: (a -> a) -> f -> f
 
-class PartialFunctor :: 
+instance PseudoFunctor f a => Functor (Trenchcoat f a) where
+  map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
 
 disguise :: forall f a. f -> Trenchcoat f a a
 disguise = flip Trenchcoat identity

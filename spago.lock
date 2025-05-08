@@ -6,7 +6,13 @@
         "core": {
           "dependencies": [
             {
+              "const": ">=6.0.0 <7.0.0"
+            },
+            {
               "foldable-traversable": ">=6.0.0 <7.0.0"
+            },
+            {
+              "newtype": ">=5.0.0 <6.0.0"
             },
             {
               "ordered-collections": ">=3.2.0 <4.0.0"
@@ -16,6 +22,9 @@
             },
             {
               "strings": ">=6.0.1 <7.0.0"
+            },
+            {
+              "typelevel-prelude": ">=7.0.0 <8.0.0"
             }
           ],
           "build_plan": [
@@ -54,6 +63,7 @@
             "tailrec",
             "tuples",
             "type-equality",
+            "typelevel-prelude",
             "unfoldable",
             "unsafe-coerce"
           ]
