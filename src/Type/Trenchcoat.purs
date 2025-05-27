@@ -1,5 +1,6 @@
 module Type.Trenchcoat
   ( Trenchcoat
+  , class 
   , class PseudoFunctor
   , PseudoFunctor0
   , pseudoMap
@@ -15,23 +16,27 @@ import Data.Newtype (un)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
-import Type.Prelude (class TypeEquals, type ($))
 
+-- | Lifts an arbitrary concrete type to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
 data Trenchcoat :: Type -> Type -> Type -> Type
-data Trenchcoat f a b = Trenchcoat f (a -> b)
+data Trenchcoat v a b = Trenchcoat v (a -> b)
+
+-- | A class for concrete types which support `Functor`-like operations on
+-- | a constant "item" type.
+-- | The item type is not considered a functional dependency,
+-- | as one type may sensibly admit multiple interpretations of its contents.
+
+class Contains v a where
+  endoMap :: (a -> a) -> v -> v
 
 -- | A class for type constructors which permit a `map`-like operation
--- | subject to a constraint on the input and output types.
--- | `pseudoMap` may freely violate the functor laws,
--- | but `Functor Trenchcoat f a` is correct by construction.
-class PseudoFunctor :: (Type -> Type) -> (Type -> Constraint) -> Constraint
-class PseudoFunctor f c where
-  pseudoMap :: forall a b. (c$a) => (c$b) => (a -> b) -> f a -> f b
-
--- | An alias for `PseudoFunctor`-like concrete types.
-type PseudoFunctor0 :: Type -> Type -> Constraint
-type PseudoFunctor0 f a = PseudoFunctor (Const f) (TypeEquals a)
+-- | subject to arbitrary constraints on the input and output types.
+-- | `pseudoMap` may freely violate the functor laws if taken to be `map`,
+-- | but `Functor (Trenchcoat f a)` is correct by construction.
+class PseudoFunctor :: (Type -> Type) -> Type -> Type -> Constraint
+class (Contains (f a) a, Contains (f b) b) <= PseudoFunctor f a b where
+  pseudoMap :: 
 
 instance PseudoFunctor f c => (c$a) => Functor (Trenchcoat f a) where
   map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
