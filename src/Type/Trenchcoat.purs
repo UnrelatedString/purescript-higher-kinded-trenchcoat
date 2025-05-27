@@ -15,7 +15,7 @@ import Data.Newtype (un)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
-import Type.Equality (class TypeEquals)
+import Type.Prelude (class TypeEquals, type ($))
 
 -- | May be renamed or restructured in a future release.
 data Trenchcoat :: Type -> Type -> Type -> Type
@@ -27,19 +27,19 @@ data Trenchcoat f a b = Trenchcoat f (a -> b)
 -- | but `Functor Trenchcoat f a` is correct by construction.
 class PseudoFunctor :: (Type -> Type) -> (Type -> Constraint) -> Constraint
 class PseudoFunctor f c where
-  pseudoMap :: forall a b. c a => c b => (a -> b) -> f a -> f b
+  pseudoMap :: forall a b. (c$a) => (c$b) => (a -> b) -> f a -> f b
 
 -- | An alias for `PseudoFunctor`-like concrete types.
 type PseudoFunctor0 :: Type -> Type -> Constraint
 type PseudoFunctor0 f a = PseudoFunctor (Const f) (TypeEquals a)
 
-instance PseudoFunctor f c => c a => Functor (Trenchcoat f a) where
+instance PseudoFunctor f c => (c$a) => Functor (Trenchcoat f a) where
   map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
 
 disguise :: forall f a. f -> Trenchcoat f a a
 disguise = flip Trenchcoat identity
 
-undisguise :: forall f a b c. PseudoFunctor f c => c a => c b => Trenchcoat f a b -> f b
+undisguise :: forall f a b c. PseudoFunctor f c => (c$a) => (c$b) => Trenchcoat f a b -> f b
 undisguise (Trenchcoat f g) = pseudoMap g f
 
 undercover
