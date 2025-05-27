@@ -26,8 +26,7 @@ data Trenchcoat v a b = Trenchcoat v (a -> b)
 -- | a constant "item" type.
 -- | The item type is not considered a functional dependency,
 -- | as one type may sensibly admit multiple interpretations of its contents.
-
-class Contains v a where
+class PseudoFunctor (Const v) a a <= Contains v a where
   endoMap :: (a -> a) -> v -> v
 
 -- | A class for type constructors which permit a `map`-like operation
@@ -35,10 +34,14 @@ class Contains v a where
 -- | `pseudoMap` may freely violate the functor laws if taken to be `map`,
 -- | but `Functor (Trenchcoat f a)` is correct by construction.
 class PseudoFunctor :: (Type -> Type) -> Type -> Type -> Constraint
-class (Contains (f a) a, Contains (f b) b) <= PseudoFunctor f a b where
-  pseudoMap :: 
+class PseudoFunctor f a b where
+  pseudoMap :: (a -> b) -> f a -> f b
 
-instance PseudoFunctor f c => (c$a) => Functor (Trenchcoat f a) where
+-- | Default implementation of `pseudoMap` to satisfy the
+-- | `PseudoFunctor (Const v) a a` superclass bound for `Contains v a`.
+pseudoMapDefaultEndo :: 
+
+instance PseudoFunctor f a b => Functor (Trenchcoat f a) where
   map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
 
 disguise :: forall f a. f -> Trenchcoat f a a
