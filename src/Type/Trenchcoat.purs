@@ -48,8 +48,8 @@ class PseudoFunctor f a b where
 instance PseudoFunctor f a b => Functor (Trenchcoat (f a) a) where
   map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
 
--- instance Contains v a => Contains (Hollow v b) a where
---   endoMap = pseudoMap
+instance Contains v a => Contains (Hollow v a) a where
+  endoMap = pseudoMap
 
 instance Contains v a => PseudoFunctor (Hollow v) a a where
   pseudoMap = coerce (endoMap :: (a -> a) -> v -> v)
