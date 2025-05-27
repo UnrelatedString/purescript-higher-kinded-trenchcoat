@@ -1,8 +1,9 @@
 module Type.Trenchcoat
   ( Trenchcoat
-  , class 
+  , Hollow(..)
+  , class Contains
+  , endoMap
   , class PseudoFunctor
-  , PseudoFunctor0
   , pseudoMap
   , disguise
   , undisguise
@@ -11,22 +12,27 @@ module Type.Trenchcoat
 
 import Prelude
 
-import Data.Const (Const(..))
 import Data.Newtype (un)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
+import Safe.Coerce (coerce)
 
 -- | Lifts an arbitrary concrete type to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
 data Trenchcoat :: Type -> Type -> Type -> Type
 data Trenchcoat v a b = Trenchcoat v (a -> b)
 
+-- | Equivalent to `Const`, but without its `Functor` instance,
+-- | purely because it would be weird for that to be inconsistent with
+-- | its `PseudoFunctor` instance.
+newtype Hollow a b = Hollow a
+
 -- | A class for concrete types which support `Functor`-like operations on
 -- | a constant "item" type.
 -- | The item type is not considered a functional dependency,
 -- | as one type may sensibly admit multiple interpretations of its contents.
-class PseudoFunctor (Const v) a a <= Contains v a where
+class Contains v a where
   endoMap :: (a -> a) -> v -> v
 
 -- | A class for type constructors which permit a `map`-like operation
@@ -37,36 +43,38 @@ class PseudoFunctor :: (Type -> Type) -> Type -> Type -> Constraint
 class PseudoFunctor f a b where
   pseudoMap :: (a -> b) -> f a -> f b
 
--- | Default implementation of `pseudoMap` to satisfy the
--- | `PseudoFunctor (Const v) a a` superclass bound for `Contains v a`.
-pseudoMapDefaultEndo :: 
-
-instance PseudoFunctor f a b => Functor (Trenchcoat f a) where
+instance PseudoFunctor f a b => Functor (Trenchcoat (f a) a) where
   map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
 
-disguise :: forall f a. f -> Trenchcoat f a a
+instance Contains v a => PseudoFunctor (Hollow v) a a where
+  pseudoMap f = coerce (endoMap f)
+
+-- | Wrap something in a `Trenchcoat`.
+disguise :: forall f a. f -> Trenchcoat (f a) a a
 disguise = flip Trenchcoat identity
 
-undisguise :: forall f a b c. PseudoFunctor f c => (c$a) => (c$b) => Trenchcoat f a b -> f b
+-- | Take a `PseudoFunctor`'s `Trenchcoat` off.
+undisguise :: forall f a b. PseudoFunctor f a b => Trenchcoat (f a) a b -> f b
 undisguise (Trenchcoat f g) = pseudoMap g f
 
+-- | Evaluate a function on a `disguise`d `PseudoFunctor`.
 undercover
-  :: forall f a b c
-  . PseudoFunctor f c
-  => (Trenchcoat f a a -> Trenchcoat f a b)
+  :: forall f a b
+  . PseudoFunctor f a b
+  => (Trenchcoat (f a) a a -> Trenchcoat (f a) a b)
   -> f a
   -> f b
 undercover g = undisguise <<< g <<< disguise
 
--- | `pseudoMap` is implemented as a round trip conversion through an `Array`.
+-- | `endoMap` is implemented as a round trip conversion through an `Array`.
 -- | For practical use, it may be more convenient to simply use this `Array` yourself.
-instance PseudoFunctor0 String CodePoint where
-  pseudoMap f = fromCodePointArray <<< map f <<< toCodePointArray
+instance Contains String CodePoint where
+  endoMap f = fromCodePointArray <<< map f <<< toCodePointArray
 
--- | `pseudoMap` is implemented as a round trip conversion through an `Array`.
+-- | `endoMap` is implemented as a round trip conversion through an `Array`.
 -- | For practical use, it may be more convenient to simply use this `Array` yourself.
-instance PseudoFunctor0 String Char where
-  pseudoMap f = fromCharArray <<< map f <<< toCharArray
+instance Contains String Char where
+  endoMap f = fromCharArray <<< map f <<< toCharArray
 
-instance Ord a => PseudoFunctor0 (Set.Set a) a where
+instance (Ord a, Ord b) => PseudoFunctor Set.Set a b where
   pseudoMap = Set.map
