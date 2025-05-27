@@ -12,7 +12,6 @@ module Type.Trenchcoat
 
 import Prelude
 
-import Data.Newtype (un)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
@@ -26,6 +25,8 @@ data Trenchcoat v a b = Trenchcoat v (a -> b)
 -- | Equivalent to `Const`, but without its `Functor` instance,
 -- | purely because it would be weird for that to be inconsistent with
 -- | its `PseudoFunctor` instance.
+-- | Also restricted to concrete ignored types.
+newtype Hollow :: Type -> Type -> Type
 newtype Hollow a b = Hollow a
 
 -- | A class for concrete types which support `Functor`-like operations on
@@ -37,7 +38,8 @@ class Contains v a where
 
 -- | A class for type constructors which permit a `map`-like operation
 -- | subject to arbitrary constraints on the input and output types.
--- | `pseudoMap` may freely violate the functor laws if taken to be `map`,
+-- | `pseudoMap` may freely violate the functor laws
+-- | if considered in the place of `map`,
 -- | but `Functor (Trenchcoat f a)` is correct by construction.
 class PseudoFunctor :: (Type -> Type) -> Type -> Type -> Constraint
 class PseudoFunctor f a b where
@@ -46,11 +48,14 @@ class PseudoFunctor f a b where
 instance PseudoFunctor f a b => Functor (Trenchcoat (f a) a) where
   map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
 
+-- instance Contains v a => Contains (Hollow v b) a where
+--   endoMap = pseudoMap
+
 instance Contains v a => PseudoFunctor (Hollow v) a a where
-  pseudoMap f = coerce (endoMap f)
+  pseudoMap = coerce (endoMap :: (a -> a) -> v -> v)
 
 -- | Wrap something in a `Trenchcoat`.
-disguise :: forall f a. f -> Trenchcoat (f a) a a
+disguise :: forall v a. v -> Trenchcoat v a a
 disguise = flip Trenchcoat identity
 
 -- | Take a `PseudoFunctor`'s `Trenchcoat` off.
