@@ -12,15 +12,19 @@ module Type.Trenchcoat
 
 import Prelude
 
+import Data.Exists (Exists, mkExists, runExists)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
 import Safe.Coerce (coerce)
 
--- | Lifts an arbitrary concrete type to a correct-by-construction `Functor`.
+-- | Lifts an arbitrary type constructor to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
-data Trenchcoat :: Type -> Type -> Type -> Type
-data Trenchcoat v a b = Trenchcoat v (a -> b)
+newtype Trenchcoat :: (Type -> Type) -> Type -> Type
+newtype Trenchcoat f b = Trenchcoat (Exists Trenchcoat' f b)
+
+data Trenchcoat' :: (Type -> Type) -> Type -> Type -> Type
+data Trenchcoat' f b a = Trenchcoat' 
 
 -- | Equivalent to `Const`, but without its `Functor` instance,
 -- | purely because it would be weird for that to be inconsistent with
@@ -55,12 +59,12 @@ instance Contains v a => PseudoFunctor (Hollow v) a a where
   pseudoMap = coerce (endoMap :: (a -> a) -> v -> v)
 
 -- | Wrap something in a `Trenchcoat`.
-disguise :: forall v a. v -> Trenchcoat v a a
-disguise = flip Trenchcoat identity
+disguise :: forall f a. f a -> Trenchcoat f a
+disguise f = Trenchcoat $ mkExists $ 
 
 -- | Take a `PseudoFunctor`'s `Trenchcoat` off.
-undisguise :: forall f a b. PseudoFunctor f a b => Trenchcoat (f a) a b -> f b
-undisguise (Trenchcoat f g) = pseudoMap g f
+undisguise :: forall f a b. PseudoFunctor f a b => Trenchcoat f b -> f b
+undisguise (Trenchcoat e) = pseudoMap g f
 
 -- | Evaluate a function on a `disguise`d `PseudoFunctor`.
 undercover
