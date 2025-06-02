@@ -16,15 +16,16 @@ import Data.Exists (Exists, mkExists, runExists)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
+import Prim.Row (class Cons)
 import Safe.Coerce (coerce)
 
 -- | Lifts an arbitrary type constructor to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
-newtype Trenchcoat :: (Type -> Type) -> Type -> Type
-newtype Trenchcoat f b = Trenchcoat (Exists Trenchcoat' f b)
+newtype Trenchcoat :: (Type -> Type) -> Row Type -> Type -> Type
+newtype Trenchcoat f r b = Trenchcoat (Exists (Trenchcoat' f r b))
 
-data Trenchcoat' :: (Type -> Type) -> Type -> Type -> Type
-data Trenchcoat' f b a = Trenchcoat' 
+data Trenchcoat' :: (Type -> Type) -> Row Type -> Type -> Type -> Type
+data Trenchcoat' f r b a = forall s r'. Cons s a r r' => Trenchcoat' (f a) (a -> b)
 
 -- | Equivalent to `Const`, but without its `Functor` instance,
 -- | purely because it would be weird for that to be inconsistent with
