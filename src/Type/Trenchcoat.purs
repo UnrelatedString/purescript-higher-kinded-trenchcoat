@@ -5,27 +5,27 @@ module Type.Trenchcoat
   , endoMap
   , class PseudoFunctor
   , pseudoMap
+  , NothingToSeeHere
   , disguise
   , undisguise
   , undercover
   ) where
 
 import Prelude
-
-import Data.Exists (Exists, mkExists, runExists)
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
+import Data.Variant (Variant, inj)
 import Prim.Row (class Cons)
 import Safe.Coerce (coerce)
 
 -- | Lifts an arbitrary type constructor to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
 newtype Trenchcoat :: (Type -> Type) -> Row Type -> Type -> Type
-newtype Trenchcoat f r b = Trenchcoat (Exists (Trenchcoat' f r b))
+newtype Trenchcoat f r b = Trenchcoat (Variant r)
 
 data Trenchcoat' :: (Type -> Type) -> Row Type -> Type -> Type -> Type
-data Trenchcoat' f r b a = forall s r'. Cons s a r r' => Trenchcoat' (f a) (a -> b)
+data Trenchcoat' f a b = Trenchcoat' (f a) (a -> b)
 
 -- | Equivalent to `Const`, but without its `Functor` instance,
 -- | purely because it would be weird for that to be inconsistent with
@@ -59,9 +59,13 @@ instance Contains v a => Contains (Hollow v b) a where
 instance Contains v a => PseudoFunctor (Hollow v) a a where
   pseudoMap = coerce (endoMap :: (a -> a) -> v -> v)
 
+-- | Placeholder label for automatically-inferred `Variant`s.
+type NothingToSeeHere :: Symbol
+type NothingToSeeHere = "nothing"
+
 -- | Wrap something in a `Trenchcoat`.
-disguise :: forall f a. f a -> Trenchcoat f a
-disguise f = Trenchcoat $ mkExists $ 
+disguise :: forall f r a. f a -> Trenchcoat f (_ | r) a
+disguise v = Trenchcoat $ inj @NothingToSeeHere $ Trenchcoat' v identity
 
 -- | Take a `PseudoFunctor`'s `Trenchcoat` off.
 undisguise :: forall f a b. PseudoFunctor f a b => Trenchcoat f b -> f b
