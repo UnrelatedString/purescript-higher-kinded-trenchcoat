@@ -15,14 +15,14 @@ import Prelude
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
-import Data.Functor.Variant (VariantF, inj)
+import Data.Functor.Variant (VariantF, inj, on, case_)
 import Prim.RowList as RL
 import Safe.Coerce (coerce)
 
 -- | Lifts an arbitrary type constructor to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
 newtype Trenchcoat :: (Type -> Type) -> Row (Type -> Type) -> Type -> Type
-newtype Trenchcoat f r b = Trenchcoat (VariantF r)
+newtype Trenchcoat f r b = Trenchcoat (VariantF r b)
 
 derive newtype instance Functor (Trenchcoat f r)
 
@@ -71,8 +71,15 @@ disguise :: forall f r a. f a -> Trenchcoat f (nothing :: Trenchcoat' f a | r) a
 disguise v = Trenchcoat $ inj @NothingToSeeHere $ Trenchcoat' v identity
 
 -- | Take a `PseudoFunctor`'s `Trenchcoat` off.
-undisguise :: forall f r b. Trenchcoat f r b -> f b
-undisguise (Trenchcoat var) = pseudoMap g f
+undisguise
+  :: forall f r rl b
+  . RL.RowToList r rl
+  => AllUndisguise rl f b
+  => Trenchcoat f r b -> f b
+undisguise (Trenchcoat var) = undisguiseInner
+
+undisguise' :: forall f a b. PseudoFunctor f a b => Trenchcoat' f a b -> b
+undisguise' (Trenchcoat' v f) = pseudoMap f v
 
 -- | Evaluate a function on a `disguise`d `PseudoFunctor`.
 undercover
@@ -83,7 +90,20 @@ undercover
   -> f b
 undercover g = undisguise <<< g <<< disguise
 
-class AllUndisguise rl 
+class AllUndisguise :: RL.RowList (Type -> Type) -> (Type -> Type) -> Type -> Constraint
+class AllUndisguise rl f b where
+  undisguiseInner :: forall r. RL.RowToList r rl => VariantF r b -> b
+
+instance AllUndisguise RL.Nil f b where
+  undisguiseInner = case_
+
+else
+instance
+  ( PseudoFunctor f a b
+  , AllUndisguise tail f b
+  )
+  => AllUndisguise (RL.Cons sym (Trenchcoat' f a) tail) f b where
+  undisguiseInner = on @sym undisguise' $ undisguiseInner
 
 -- | `endoMap` is implemented as a round trip conversion through an `Array`.
 -- | For practical use, it may be more convenient to simply use this `Array` yourself.
