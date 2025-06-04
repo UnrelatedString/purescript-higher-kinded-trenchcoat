@@ -18,6 +18,7 @@ import Data.String.CodeUnits (toCharArray, fromCharArray)
 import Data.Functor.Variant (VariantF, inj, on, case_)
 import Prim.RowList as RL
 import Safe.Coerce (coerce)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Lifts an arbitrary type constructor to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
@@ -95,7 +96,7 @@ class AllUndisguise rl f b where
   undisguiseInner :: forall r. RL.RowToList r rl => VariantF r b -> b
 
 instance AllUndisguise RL.Nil f b where
-  undisguiseInner = case_
+  undisguiseInner = unsafeCoerce case_
 
 else
 instance
