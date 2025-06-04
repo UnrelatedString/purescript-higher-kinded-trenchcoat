@@ -3,7 +3,6 @@ package:
   description: Lifting types into classes they literally cannot instance, for fun and profit 
   dependencies:
     - prelude: ">=6.0.2 <7.0.0"
-    - exists: ">=6.0.0 <7.0.0"
     - foldable-traversable: ">=6.0.0 <7.0.0"
     - ordered-collections: ">=3.2.0 <4.0.0"
     - safe-coerce: ">=2.0.0 <3.0.0"

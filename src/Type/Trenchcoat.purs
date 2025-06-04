@@ -15,17 +15,23 @@ import Prelude
 import Data.Set as Set
 import Data.String.CodePoints (CodePoint, toCodePointArray, fromCodePointArray)
 import Data.String.CodeUnits (toCharArray, fromCharArray)
-import Data.Variant (Variant, inj)
-import Prim.Row (class Cons)
+import Data.Functor.Variant (VariantF, inj)
+import Prim.RowList as RL
 import Safe.Coerce (coerce)
 
 -- | Lifts an arbitrary type constructor to a correct-by-construction `Functor`.
 -- | May be renamed or restructured in a future release.
-newtype Trenchcoat :: (Type -> Type) -> Row Type -> Type -> Type
-newtype Trenchcoat f r b = Trenchcoat (Variant r)
+newtype Trenchcoat :: (Type -> Type) -> Row (Type -> Type) -> Type -> Type
+newtype Trenchcoat f r b = Trenchcoat (VariantF r)
 
-data Trenchcoat' :: (Type -> Type) -> Row Type -> Type -> Type -> Type
+derive newtype instance Functor (Trenchcoat f r)
+
+data Trenchcoat' :: (Type -> Type) -> Type -> Type -> Type
 data Trenchcoat' f a b = Trenchcoat' (f a) (a -> b)
+
+instance Functor (Trenchcoat' f a) where
+  -- | Dumb composition: the backbone of `undisguise`.
+  map f (Trenchcoat' v g) = Trenchcoat' v $ f <<< g
 
 -- | Equivalent to `Const`, but without its `Functor` instance,
 -- | purely because it would be weird for that to be inconsistent with
@@ -50,9 +56,6 @@ class PseudoFunctor :: (Type -> Type) -> Type -> Type -> Constraint
 class PseudoFunctor f a b where
   pseudoMap :: (a -> b) -> f a -> f b
 
-instance PseudoFunctor f a b => Functor (Trenchcoat (f a) a) where
-  map f (Trenchcoat v g) = Trenchcoat v $ f <<< g
-
 instance Contains v a => Contains (Hollow v b) a where
   endoMap = coerce (endoMap :: (a -> a) -> v -> v)
 
@@ -64,12 +67,12 @@ type NothingToSeeHere :: Symbol
 type NothingToSeeHere = "nothing"
 
 -- | Wrap something in a `Trenchcoat`.
-disguise :: forall f r a. f a -> Trenchcoat f (_ | r) a
+disguise :: forall f r a. f a -> Trenchcoat f (nothing :: Trenchcoat' f a | r) a
 disguise v = Trenchcoat $ inj @NothingToSeeHere $ Trenchcoat' v identity
 
 -- | Take a `PseudoFunctor`'s `Trenchcoat` off.
-undisguise :: forall f a b. PseudoFunctor f a b => Trenchcoat f b -> f b
-undisguise (Trenchcoat e) = pseudoMap g f
+undisguise :: forall f r b. Trenchcoat f r b -> f b
+undisguise (Trenchcoat var) = pseudoMap g f
 
 -- | Evaluate a function on a `disguise`d `PseudoFunctor`.
 undercover
@@ -79,6 +82,8 @@ undercover
   -> f a
   -> f b
 undercover g = undisguise <<< g <<< disguise
+
+class AllUndisguise rl 
 
 -- | `endoMap` is implemented as a round trip conversion through an `Array`.
 -- | For practical use, it may be more convenient to simply use this `Array` yourself.
